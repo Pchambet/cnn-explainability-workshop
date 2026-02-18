@@ -100,22 +100,37 @@ Where Grad-CAM says *"this area contributed to the decision"*, occlusion says *"
 
 The French data protection authority (CNIL) recommends **masking the eyes** to anonymize faces. But is that enough to fool a modern CNN?
 
-We tested 4 anonymization strategies with increasing coverage and measured the confidence drop:
+We tested 4 anonymization strategies with increasing coverage and measured the actual confidence drop on VGG16:
 
 ![Comparison of 4 anonymization methods and their effect on CNN classification](output_figures/04_cnil_mask.png)
 
-| Method | What's hidden | CNN still confident? |
-|--------|--------------|:--------------------:|
-| Eyes only | Just the eye region | ✅ Yes — barely affected |
-| Eyes + Nose | Central facial features | ⚠️ Partially degraded |
-| Full face | Everything above the chin | ❌ Significantly degraded |
-| Gaussian blur | Entire image blurred | ❌ Fully degraded |
+### The actual numbers
 
-### Why this matters
+| Method | Predicted class | Confidence | Drop vs. original | Same class? |
+|--------|:--------------:|:----------:|:-----------------:|:-----------:|
+| **Original** (no mask) | jersey | **38.1%** | — | — |
+| **Eyes only** | jersey | 8.2% | **−78.4%** | ✅ Yes |
+| **Eyes + Nose** | jersey | 23.0% | −39.8% | ✅ Yes |
+| **Full face** | web_site | 4.0% | −89.6% | ❌ No |
+| **Gaussian blur** | perfume | 6.1% | −84.0% | ❌ No |
 
-**Eye masking alone is insufficient.** The CNN continues to classify correctly using nose shape, jawline, skin texture, and clothing — features that the regulatory framework doesn't consider.
+### What do these numbers actually tell us?
 
-This has real-world implications: anonymization guidelines designed for human perception may not protect against algorithmic re-identification. Moreover, research suggests this problem is **ethnically biased** — face recognition systems perform differently across demographic groups (Shrutin et al., 2019), meaning anonymization effectiveness is not uniform.
+Let's be intellectually honest — the results are **more nuanced** than a simple "eye masking fails":
+
+1. **Eye masking _does_ reduce confidence significantly** — from 38.1% down to 8.2%, a 78% drop. That's not nothing. The mask clearly disrupts the network's ability to make a confident prediction.
+
+2. **But the predicted class doesn't change.** The model still says "jersey." It adapted — instead of using the whole face+body combination, it relied more heavily on clothing texture, skin tone, and body shape. The identity of the prediction survived the masking.
+
+3. **Eyes + Nose is paradoxically _less_ effective** than eyes alone (23% confidence vs 8.2%). This is counterintuitive. A possible explanation: masking a larger contiguous area creates a strong contrast edge that the CNN treats as a new feature (a "rectangle on a shirt"), which accidentally *reinforces* the clothing classification.
+
+4. **Only full-face and blur force a class change** — and even then, the replacement classes ("web_site", "perfume") are nonsensical, meaning the model is truly confused, not just less confident.
+
+### The takeaway
+
+The CNIL guideline of masking the eyes was designed for **human perception** — a person can't recognize a face without seeing the eyes. But CNNs don't "see" like humans. They use **statistical texture patterns** across the entire image: skin color distribution, jawline contour, hair texture, clothing patterns. Masking 14% of the image (the eye region) leaves 86% of exploitable features intact.
+
+This has real-world implications: anonymization guidelines designed for humans may not protect against algorithmic re-identification. Moreover, research suggests this problem is **ethnically biased** — face recognition systems perform differently across demographic groups, and anonymization effectiveness varies with skin tone and facial structure (Shrutin et al., 2019).
 
 ---
 
