@@ -2,6 +2,7 @@
 
 > **What do CNNs actually learn? And can we trust their decisions?**
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Pchambet/cnn-explainability-workshop/blob/main/TP_Reconnaissance_Faciale.ipynb)
 [![Python](https://img.shields.io/badge/Python-3.11-blue)](https://python.org)
 [![TensorFlow](https://img.shields.io/badge/TensorFlow-2.20-orange)](https://tensorflow.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
