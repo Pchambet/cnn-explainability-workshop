@@ -31,3 +31,4 @@ uv.lock
 
 # Script de génération (pas nécessaire dans le repo)
 create_notebook.py
+build_nb*.py
