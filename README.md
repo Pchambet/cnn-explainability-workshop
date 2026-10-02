@@ -14,7 +14,7 @@ Does a black bar over the eyes stop a CNN from recognising a face? A one-shot re
 - **The eye bar dents re-identification, it does not stop it.** With one clean enrolment photo per person, an off-the-shelf ImageNet VGG16 names the right person for 17.5% of unmasked probes among 62 identities (chance 1.6%) and 13.9% of eye-barred ones: 79% of its accuracy survives, 8.6× chance.
 - **A free counter-move cancels it.** If the attacker draws the same bar on the enrolment photo, eye-barred probes are re-identified at 17.2% (flattened features) and 18.4% (averaged features).
 - **What the bar does break is a fixed threshold.** It lowers every similarity score, so a verifier frozen at a 1% false-accept rate goes from accepting 5.1% of genuine pairs to 0.1%. Ranking, which is what an attacker uses, is barely affected (AUC 0.69 → 0.67).
-- **Why:** occlusion on the matcher puts 12% of its sensitivity in the eye band, which covers 10% of the image: barely more than its share. The peak is at mouth level.
+- **Why:** occlusion on the matcher puts 12% of its sensitivity in the eye band, which covers 10% of the image: about its fair share. The same bar moved down over the mouth would hide 18%.
 - **The original version of this workshop measured the wrong thing.** It reported how the ImageNet probability of "jersey" changed when a portrait's eyes were masked; that describes a clothing classifier, not identity. It is kept below for the record and replaced by the experiment above.
 
 ## Why it matters
@@ -63,13 +63,13 @@ Every mask leaves the flattened VGG16 matcher well above chance (1.6%), includin
 | Eigenfaces, clean enrolment | 11.6% | 6.3% | 4.7% | 10.2% | 6.9% | 5.1% |
 | Eigenfaces, masked enrolment | 11.6% | 7.7% | 7.3% | 9.9% | 8.2% | 7.0% |
 
-Most of what the bar removes is a mismatch between probe and reference, not identity: once both carry the bar (or the mild blur), the CNN matchers are back at, or above, their unmasked accuracy.
+Most of what the bar removes is a mismatch between probe and reference, not identity: once both photos carry the bar, the CNN matchers are back at (flattened, 17.2% vs 17.5%) or above (averaged, 18.4% vs 16.7%) their unmasked accuracy. Matching the mask helps the CNNs under every mask; it helps eigenfaces much less (and not at all under the mild blur).
 
 **Where the matcher looks.**
 
 ![Average occlusion sensitivity of the matcher](docs/figures/matcher_occlusion.png)
 
-Hiding a 40 × 40 px patch of the probe and measuring the drop in similarity to the enrolled photo, averaged over the 62 aligned identities: the eye band holds 12% of the sensitivity for 10% of the image, about its fair share. The peak is at mouth level, and the horizontal band from nose to chin carries 43% of the total. An eye bar hides the part of the face this matcher needs least.
+Hiding a 40 × 40 px patch of the probe and measuring the drop in similarity to the enrolled photo, averaged over the 62 aligned identities: the eye band holds 12% of the sensitivity for 10% of the image, about its fair share, and the peak sits just below the nose. Sliding a box of the eye bar's size down the face, it would hide at most 18% (over the mouth and chin) and at least 10% (over the forehead). The eyes are not where this matcher concentrates its evidence, so a bar there removes little that the rest of the face cannot make up for.
 
 **Verification collapses under a frozen threshold.**
 
@@ -100,7 +100,7 @@ Activation maximisation (gradient ascent on the input, pre-ReLU objective) shows
 
 These numbers describe a clothing classifier's confidence; they cannot say whether the person is still recognisable. (The first version reported 0.381 → 0.082 for the eye bar; the small difference in the unmasked value comes from the image resizing library.)
 
-**Cost.** VGG16 has 138.4 M parameters (553 MB of float32 weights); the pool5 extractor keeps 14.7 M (59 MB). On the laptop CPU used here (3 TensorFlow threads, other jobs running, load average 10-21 on 10 cores), the best of 30 single-image runs took 422 ms for the classifier and 221 ms for the extractor, and about 294 ms per image in batches of 32; medians were higher and unstable, so these are upper bounds for this machine, not a benchmark (raw numbers in [`results/latency.json`](results/latency.json)). Quantisation and TF-Lite were not tried.
+**Cost.** VGG16 has 138.4 M parameters (553 MB of float32 weights); the pool5 extractor keeps 14.7 M (59 MB). On the laptop CPU used here (3 TensorFlow threads, other jobs running, load average 10-21 on 10 cores), the best of 30 single-image runs took 422 ms for the classifier and 221 ms for the extractor, and the best of 5 batches of 32 took 294-310 ms per image; medians were higher and unstable, so these are upper bounds for this machine, not a benchmark (raw numbers in [`results/latency.json`](results/latency.json)). Quantisation and TF-Lite were not tried.
 
 ## Corrections to the first version
 

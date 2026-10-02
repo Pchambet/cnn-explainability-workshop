@@ -96,7 +96,7 @@ footer { margin-top: 56px; font-size: 0.85rem; color: var(--muted); }
 
 <h2>Why: where the matcher looks</h2>
 <figure><img src="figures/matcher_occlusion.png" alt="Average occlusion sensitivity of the matcher over the average face"></figure>
-<p>Hiding a 40-pixel patch of the probe and measuring the drop in similarity to the enrolled photo, averaged over the 62 aligned identities, gives the matcher's sensitivity map. The eye band holds 12% of it for 10% of the image area, roughly its fair share; the peak sits at mouth level. An eye bar hides the part of the face this matcher needs least.</p>
+<p>Hiding a 40-pixel patch of the probe and measuring the drop in similarity to the enrolled photo, averaged over the 62 aligned identities, gives the matcher's sensitivity map. The eye band holds 12% of it for 10% of the image area, roughly its fair share; the peak sits just below the nose. Slid down the face, a bar of the same size would hide up to 18% (over the mouth and chin); slid up to the forehead, 10%. The eyes are not where this matcher concentrates its evidence, so a bar there removes little that the rest of the face cannot make up for.</p>
 
 <h2>What an ImageNet CNN sees in a portrait</h2>
 <figure><img src="figures/portrait_explanations.png" alt="Grad-CAM at three depths and occlusion on a portrait"></figure>

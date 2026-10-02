@@ -3,7 +3,7 @@
 Regions are fractional boxes ``(top, bottom, left, right)`` so one layout works at any
 resolution. LFW images are deep-funneled (aligned), so a single fixed layout places the bar
 over the eyes of every face; the layout was read off the mean face of the evaluation subset
-(see ``docs/figures/masks.png``).
+(the hero figure draws the boxes on that mean face).
 """
 
 from __future__ import annotations
@@ -49,15 +49,16 @@ CONDITIONS = {
 BLUR_SIGMA = {"blur_mild": 0.04, "blur_strong": 0.134}
 
 
-def _pixels(image: np.ndarray, box: Box) -> tuple[slice, slice]:
-    h, w = image.shape[:2]
+def box_slices(shape: tuple[int, ...], box: Box) -> tuple[slice, slice]:
+    """Row and column slices of a fractional box on an array of the given shape."""
+    h, w = shape[:2]
     top, bottom, left, right = box
     return slice(round(h * top), round(h * bottom)), slice(round(w * left), round(w * right))
 
 
 def black_box(image: np.ndarray, box: Box) -> np.ndarray:
     out = image.copy()
-    out[_pixels(image, box)] = 0
+    out[box_slices(image.shape, box)] = 0
     return out
 
 
@@ -66,7 +67,7 @@ def blur_box(image: np.ndarray, box: Box, sigma_frac: float) -> np.ndarray:
     sigma = sigma_frac * image.shape[1]
     blurred = np.asarray(Image.fromarray(image).filter(ImageFilter.GaussianBlur(sigma)))
     out = image.copy()
-    rows, cols = _pixels(image, box)
+    rows, cols = box_slices(image.shape, box)
     out[rows, cols] = blurred[rows, cols]
     return out
 

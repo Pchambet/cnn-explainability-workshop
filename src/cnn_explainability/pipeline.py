@@ -318,27 +318,63 @@ def matcher_occlusion(extractor, faces: lfw.FaceSet) -> dict:
     maps = np.stack(maps)
 
     mean_map = maps.mean(axis=0)
-    positive = np.clip(mean_map, 0, None)
     layout = masks.LFW_LAYOUT
-    shares = {}
-    for name, box in {
-        "eyes": layout.eyes,
-        "eyes_nose": layout.eyes_nose,
-        "face": layout.face,
-    }.items():
-        h, w = positive.shape
-        top, bottom, left, right = box
-        region = positive[round(h * top) : round(h * bottom), round(w * left) : round(w * right)]
-        shares[name] = {
-            "sensitivity_share": float(region.sum() / positive.sum()),
-            "area_share": float(region.size / positive.size),
-        }
+    shares = region_shares(
+        mean_map, {"eyes": layout.eyes, "eyes_nose": layout.eyes_nose, "face": layout.face}
+    )
+    # Is the eye band special? Slide a box of the eye bar's size down the face box and see
+    # what the same amount of black would hide elsewhere.
+    scan = bar_scan(mean_map, layout.eyes, rows=(layout.face[0], layout.face[1]))
+    peak_row, peak_col = np.unravel_index(int(np.argmax(mean_map)), mean_map.shape)
     np.save(RESULTS / "matcher_occlusion_mean.npy", mean_map.astype("float16"))
     return {
         "n_identities": len(maps),
         "patch": MATCHER_PATCH,
         "stride": MATCHER_PATCH // 2,
         "regions": shares,
+        "eye_bar_scan": scan,
+        "peak": {
+            "row_fraction": peak_row / mean_map.shape[0],
+            "col_fraction": peak_col / mean_map.shape[1],
+        },
+    }
+
+
+def region_shares(sensitivity: np.ndarray, boxes: dict[str, masks.Box]) -> dict:
+    """Share of the total positive sensitivity, and of the image area, inside each box.
+
+    Negative values (hiding a patch *raised* the score) are clipped: they are not evidence
+    that the region carries identity.
+    """
+    positive = np.clip(sensitivity, 0, None)
+    out = {}
+    for name, box in boxes.items():
+        region = positive[masks.box_slices(positive.shape, box)]
+        out[name] = {
+            "sensitivity_share": float(region.sum() / positive.sum()),
+            "area_share": float(region.size / positive.size),
+        }
+    return out
+
+
+def bar_scan(
+    sensitivity: np.ndarray, bar: masks.Box, rows: tuple[float, float]
+) -> dict[str, dict[str, float]]:
+    """Slide ``bar`` vertically (same height and columns) between the ``rows`` fractions, one
+    pixel row at a time, and return the positions where it hides the least and the most
+    positive sensitivity."""
+    positive = np.clip(sensitivity, 0, None)
+    h = positive.shape[0]
+    top, bottom, left, right = bar
+    height = round(h * bottom) - round(h * top)
+    cols = masks.box_slices(positive.shape, (0.0, 1.0, left, right))[1]
+    row_mass = positive[:, cols].sum(axis=1) / positive.sum()
+    starts = range(round(h * rows[0]), round(h * rows[1]) - height + 1)
+    scores = {start: float(row_mass[start : start + height].sum()) for start in starts}
+    lo, hi = min(scores, key=scores.get), max(scores, key=scores.get)
+    return {
+        "min": {"top": lo / h, "sensitivity_share": scores[lo]},
+        "max": {"top": hi / h, "sensitivity_share": scores[hi]},
     }
 
 

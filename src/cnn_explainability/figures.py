@@ -221,18 +221,33 @@ def matcher_map(meta: dict) -> None:
     im = axes[1].imshow(np.clip(heat, 0, None), cmap="magma", alpha=0.65)
     h, w = heat.shape
     top, bottom, left, right = masks.LFW_LAYOUT.eyes
-    axes[1].add_patch(
-        Rectangle(
-            (left * w, top * h),
-            (right - left) * w,
-            (bottom - top) * h,
-            fill=False,
-            ec="white",
-            lw=1.5,
-            ls="--",
+    eyes = occ["eyes"]
+    most = meta["matcher_occlusion"]["eye_bar_scan"]["max"]
+    bars = [
+        (top, "white", f"eye bar: {eyes['sensitivity_share']:.0%}"),
+        (most["top"], AMBER, f"same bar, lower: {most['sensitivity_share']:.0%}"),
+    ]
+    for bar_top, colour, label in bars:
+        axes[1].add_patch(
+            Rectangle(
+                (left * w, bar_top * h),
+                (right - left) * w,
+                (bottom - top) * h,
+                fill=False,
+                ec=colour,
+                lw=1.5,
+                ls="--",
+            )
         )
-    )
-    axes[1].text(right * w - 2, top * h - 3, "eye bar", color="white", fontsize=8.5, ha="right")
+        axes[1].text(
+            right * w - 2,
+            bar_top * h - 4,
+            label,
+            color=colour,
+            fontsize=8.5,
+            ha="right",
+            bbox={"facecolor": INK, "alpha": 0.7, "edgecolor": "none", "pad": 1.5},
+        )
     axes[1].set_title(
         "Drop in genuine similarity when a patch is hidden", fontsize=10, fontweight="normal"
     )
@@ -240,10 +255,9 @@ def matcher_map(meta: dict) -> None:
         ax.set_axis_off()
     cbar = fig.colorbar(im, ax=axes[1], fraction=0.046, pad=0.02)
     cbar.set_label("cosine similarity drop", color=INK)
-    eyes = occ["eyes"]
     fig.suptitle(
-        f"The eye band holds {eyes['sensitivity_share']:.0%} of the matcher's sensitivity "
-        f"for {eyes['area_share']:.0%} of the image",
+        f"An eye bar hides {eyes['sensitivity_share']:.0%} of what the matcher uses; "
+        f"the same bar over the mouth would hide {most['sensitivity_share']:.0%}",
         x=0.125,
         ha="left",
         fontsize=12,

@@ -25,6 +25,20 @@
         "sensitivity_share": 0.5789238088628484,
         "area_share": 0.42694444444444446
       }
+    },
+    "eye_bar_scan": {
+      "min": {
+        "top": 0.17777777777777778,
+        "sensitivity_share": 0.10143746271170898
+      },
+      "max": {
+        "top": 0.6277777777777778,
+        "sensitivity_share": 0.17560647683046557
+      }
+    },
+    "peak": {
+      "row_fraction": 0.6666666666666666,
+      "col_fraction": 0.5
     }
   }
 }

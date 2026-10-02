@@ -119,6 +119,7 @@ def key_facts(summary: list[dict], lfw: dict, portrait: dict, latency: dict) -> 
         return figures._pick(summary, rep, cond, gallery)[metric]
 
     eyes = lfw["matcher_occlusion"]["regions"]["eyes"]
+    scan = lfw["matcher_occlusion"]["eye_bar_scan"]
     flat = latency["models"]["vgg16_classifier"]
     return {
         "n_ids": lfw["n_identities"],
@@ -153,6 +154,8 @@ def key_facts(summary: list[dict], lfw: dict, portrait: dict, latency: dict) -> 
         "v1_far": _pct(r("vgg16_flat", "none", "far_fixed_mean"), 1),
         "eye_sens": _pct(eyes["sensitivity_share"]),
         "eye_area": _pct(eyes["area_share"]),
+        "bar_max": _pct(scan["max"]["sensitivity_share"]),
+        "bar_min": _pct(scan["min"]["sensitivity_share"]),
         "target": portrait["target_class"],
         "target_p": f"{portrait['top5'][0]['p']:.2f}",
         "peak_text": peak_text(portrait["peak_zones"]),
