@@ -75,6 +75,7 @@ def evaluate(
     seed: int,
     far: float = 0.01,
     fixed_threshold: float | None = None,
+    clean: str = "none",
 ) -> list[dict]:
     """Metrics per condition and per enrolment draw.
 
@@ -84,7 +85,6 @@ def evaluate(
     as a deployed system would be.
     """
     rng = np.random.default_rng(seed)
-    clean = next(iter(sims))
     rows = []
     for draw in range(n_draws):
         gallery, probes = one_shot_split(labels, rng)

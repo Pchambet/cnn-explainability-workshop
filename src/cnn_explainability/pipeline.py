@@ -36,13 +36,14 @@ from cnn_explainability.config import (
 INTERIM = ROOT / "data" / "interim"
 FILTER_LAYERS = ["block1_conv2", "block3_conv3", "block5_conv3"]
 CAM_LAYERS = ["block3_conv3", "block4_conv3", "block5_conv3"]
-# Anatomical zones on the 224 x 224 portrait, (top, bottom, left, right) fractions.
+# Anatomical zones on the 224 x 224 portrait, (top, bottom, left, right) fractions, read off
+# the resized image (the hairline, eyes, nose, mouth, chin and collar of this particular photo).
 PORTRAIT_ZONES = {
-    "forehead_hair": (0.0, 0.25, 0.0, 1.0),
-    "eyes": (0.25, 0.42, 0.1, 0.9),
-    "nose": (0.42, 0.58, 0.25, 0.75),
-    "mouth_chin": (0.58, 0.78, 0.15, 0.85),
-    "neck_clothing": (0.78, 1.0, 0.0, 1.0),
+    "forehead_hair": (0.0, 0.28, 0.0, 1.0),
+    "eyes": (0.28, 0.40, 0.15, 0.85),
+    "nose": (0.40, 0.48, 0.30, 0.70),
+    "mouth_chin": (0.48, 0.60, 0.20, 0.80),
+    "neck_clothing": (0.60, 1.0, 0.0, 1.0),
 }
 V1_THRESHOLD = 0.5  # rejection threshold hard-coded in the original FaceRecognizer
 GALLERY_PROBE_PAIR = (0, 1)  # file indices per identity used for the matcher occlusion maps
@@ -68,7 +69,9 @@ def run_portrait() -> dict:
     filters_viz, filter_stats = {}, {}
     for layer in FILTER_LAYERS:
         filters_viz[layer] = maximise_and_quantise(notop, layer, list(range(8)), size=128)
-        sample = explain.maximise_activation(notop, layer, list(range(16)), size=64, steps=20)
+        sample = explain.maximise_activation(
+            notop, layer, list(range(16)), size=64, steps=20, preprocess=vgg.preprocess_unit
+        )
         entropies = [explain.histogram_entropy(img) for img in sample]
         filter_stats[layer] = {
             "entropy_mean": float(np.mean(entropies)),
@@ -99,6 +102,10 @@ def run_portrait() -> dict:
 
     occlusion, base = explain.occlusion_map(image, class_prob, patch=32, stride=16)
     occ_zones = {zone: explain.region_mean(occlusion, box) for zone, box in PORTRAIT_ZONES.items()}
+    peaks = {
+        "gradcam_block5_conv3": peak_zone(cams["block5_conv3"]),
+        "occlusion": peak_zone(occlusion),
+    }
 
     masked_preds = []
     for condition in masks.CONDITIONS:
@@ -114,6 +121,7 @@ def run_portrait() -> dict:
             }
         )
 
+    RESULTS.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(
         RESULTS / "portrait_maps.npz",
         **{f"filters_{k}": v for k, v in filters_viz.items()},
@@ -130,14 +138,28 @@ def run_portrait() -> dict:
         "gradcam_zone_means": cam_zones,
         "occlusion_base_p": base,
         "occlusion_zone_means": occ_zones,
+        "peak_zones": peaks,
         "masked_predictions": masked_preds,
     }
     _write_json("portrait.json", payload)
     return payload
 
 
+def peak_zone(heatmap: np.ndarray) -> str:
+    """Name of the anatomical zone that contains the hottest pixel of a 224 x 224 map."""
+    y, x = np.unravel_index(int(np.argmax(heatmap)), heatmap.shape)
+    fy, fx = y / heatmap.shape[0], x / heatmap.shape[1]
+    for zone, (top, bottom, left, right) in PORTRAIT_ZONES.items():
+        if top <= fy < bottom and left <= fx < right:
+            return zone
+    return "background"
+
+
 def maximise_and_quantise(model, layer: str, filters: list[int], size: int) -> np.ndarray:
-    return (explain.maximise_activation(model, layer, filters, size=size) * 255).astype("uint8")
+    images = explain.maximise_activation(
+        model, layer, filters, size=size, preprocess=vgg.preprocess_unit
+    )
+    return (images * 255).astype("uint8")
 
 
 # --------------------------------------------------------------------------- LFW
@@ -157,10 +179,13 @@ def _vgg_embeddings(extractor, faces: lfw.FaceSet, condition: str) -> dict[str, 
             return {k: data[k].astype("float32") for k in data.files}
     t0 = time.perf_counter()
     emb = vgg.embed(extractor, masks.apply_batch(faces.images, condition))
+    # Stored as float16 to halve the cache (62 MB per condition); return the stored values so
+    # a first run and a cached re-run produce identical numbers.
+    emb["flat"] = emb["flat"].astype("float16")
     INTERIM.mkdir(parents=True, exist_ok=True)
-    np.savez(cache, flat=emb["flat"].astype("float16"), gap=emb["gap"])
-    print(f"  embedded {condition}: {time.perf_counter() - t0:.0f} s")
-    return emb
+    np.savez(cache, **emb)
+    print(f"  embedded {condition}: {time.perf_counter() - t0:.0f} s", flush=True)
+    return {k: v.astype("float32") for k, v in emb.items()}
 
 
 def run_lfw() -> dict:
@@ -170,46 +195,49 @@ def run_lfw() -> dict:
     faces = lfw.load_subset(folder, LFW_MIN_IMAGES, cap=LFW_MAX_IMAGES)
     baseline_fit = lfw.load_subset(folder, LFW_BASELINE_MIN_IMAGES, max_images=19)
     assert not set(faces.names) & set(baseline_fit.names), "baseline must not see test ids"
+    save_mean_face(faces)
 
     model = vgg.load_vgg16(include_top=True)
     extractor = vgg.embedding_model(model)
     pca = PCA(n_components=100, whiten=True, random_state=SEED)
     pca.fit(_grey_small(baseline_fit.images))
 
-    clean_vgg = _vgg_embeddings(extractor, faces, "none")
-    clean_px = _grey_small(faces.images)
-    references = {
-        "vgg16_flat": clean_vgg["flat"],
-        "vgg16_gap": clean_vgg["gap"],
-        "eigenfaces": pca.transform(clean_px),
-        "pixels": clean_px,
-    }
-    sims: dict[str, dict[str, np.ndarray]] = {rep: {} for rep in references}
-    for condition in masks.CONDITIONS:
+    def representations(condition: str) -> dict[str, np.ndarray]:
         emb = _vgg_embeddings(extractor, faces, condition)
         px = _grey_small(masks.apply_batch(faces.images, condition))
-        probes = {
+        return {
             "vgg16_flat": emb["flat"],
             "vgg16_gap": emb["gap"],
             "eigenfaces": pca.transform(px),
             "pixels": px,
         }
-        for rep, probe in probes.items():
-            sims[rep][condition] = recognition.similarity(probe, references[rep])
+
+    # Two attackers. "clean": the enrolment photos are unmasked, as found online. "matched":
+    # the attacker applies the same mask to the enrolment photos before comparing, which
+    # costs nothing and removes the mismatch the mask creates.
+    clean = representations("none")
+    sims: dict[tuple[str, str], dict[str, np.ndarray]] = {}
+    for condition in masks.CONDITIONS:
+        probe = representations(condition)
+        for rep in probe:
+            for gallery, reference in (("clean", clean[rep]), ("matched", probe[rep])):
+                sims.setdefault((rep, gallery), {})[condition] = recognition.similarity(
+                    probe[rep], reference
+                )
 
     rows = []
-    for rep, by_condition in sims.items():
+    for (rep, gallery), by_condition in sims.items():
         threshold = V1_THRESHOLD if rep == "vgg16_flat" else None
         for row in recognition.evaluate(
             by_condition, faces.labels, N_ENROLMENT_DRAWS, SEED, fixed_threshold=threshold
         ):
-            rows.append({"representation": rep, **row})
+            rows.append({"representation": rep, "gallery": gallery, **row})
     _write_csv(RESULTS / "lfw_draws.csv", rows)
 
     summary = summarise(rows)
     _write_csv(RESULTS / "lfw_summary.csv", summary)
 
-    sensitivity = matcher_occlusion(extractor, faces, folder)
+    sensitivity = matcher_occlusion(extractor, faces)
     payload = {
         "n_identities": len(faces.names),
         "images_per_identity": LFW_MAX_IMAGES,
@@ -226,15 +254,26 @@ def run_lfw() -> dict:
     return payload
 
 
+def save_mean_face(faces: lfw.FaceSet) -> None:
+    """The average evaluation image: shows the mask geometry without showing anyone."""
+    from PIL import Image
+
+    RESULTS.mkdir(parents=True, exist_ok=True)
+    mean = faces.images.mean(axis=0).round().astype("uint8")
+    Image.fromarray(mean).save(RESULTS / "lfw_mean_face.png")
+
+
 def summarise(rows: list[dict]) -> list[dict]:
-    """Mean and 2.5-97.5 percentile band over enrolment draws, per representation/condition."""
-    ids = {"representation", "condition", "draw"}
-    metrics = [k for k in dict.fromkeys(k for r in rows for k in r) if k not in ids]
-    keys = dict.fromkeys((r["representation"], r["condition"]) for r in rows)
+    """Mean and 2.5-97.5 percentile band over enrolment draws, per (representation, gallery,
+    condition)."""
+    ids = ("representation", "gallery", "condition")
+    metrics = [k for k in dict.fromkeys(k for r in rows for k in r) if k not in {*ids, "draw"}]
+    groups: dict[tuple, list[dict]] = {}
+    for r in rows:
+        groups.setdefault(tuple(r[k] for k in ids), []).append(r)
     out = []
-    for rep, cond in keys:
-        sub = [r for r in rows if r["representation"] == rep and r["condition"] == cond]
-        entry: dict = {"representation": rep, "condition": cond}
+    for key, sub in groups.items():
+        entry: dict = dict(zip(ids, key, strict=True))
         for m in metrics:
             if m not in sub[0]:
                 continue
@@ -246,7 +285,7 @@ def summarise(rows: list[dict]) -> list[dict]:
     return out
 
 
-def matcher_occlusion(extractor, faces: lfw.FaceSet, folder: Path) -> dict:
+def matcher_occlusion(extractor, faces: lfw.FaceSet) -> dict:
     """Where does the *matcher* look? Occlusion maps of the genuine similarity.
 
     For every identity, photo 0 is enrolled and photo 1 is the probe; we slide a grey patch
@@ -255,27 +294,28 @@ def matcher_occlusion(extractor, faces: lfw.FaceSet, folder: Path) -> dict:
     """
     first = np.array([np.flatnonzero(faces.labels == c)[0] for c in range(len(faces.names))])
     enrol_idx, probe_idx = first + GALLERY_PROBE_PAIR[0], first + GALLERY_PROBE_PAIR[1]
-    cache = INTERIM / "matcher_occlusion.npy"
-    if cache.exists():
-        maps = np.load(cache)
-    else:
-        refs = recognition.l2_normalize(vgg.embed(extractor, faces.images[enrol_idx])["flat"])
-        maps = []
-        for k, (ref, i) in enumerate(zip(refs, probe_idx, strict=True)):
+    cache = INTERIM / "matcher_occlusion"
+    cache.mkdir(parents=True, exist_ok=True)
+    refs = None
+    maps = []
+    for k, i in enumerate(probe_idx):
+        path = cache / f"{faces.names[k]}.npy"
+        if not path.exists():  # one file per identity, so an interrupted run resumes
+            if refs is None:
+                flat = vgg.embed(extractor, faces.images[enrol_idx])["flat"]
+                refs = recognition.l2_normalize(flat)
 
-            def score(batch: np.ndarray, ref: np.ndarray = ref) -> np.ndarray:
-                emb = recognition.l2_normalize(vgg.embed(extractor, batch, batch_size=64)["flat"])
+            def score(batch: np.ndarray, ref: np.ndarray = refs[k]) -> np.ndarray:
+                emb = recognition.l2_normalize(vgg.embed(extractor, batch, batch_size=32)["flat"])
                 return emb @ ref
 
             heat, _ = explain.occlusion_map(
                 faces.images[i], score, patch=MATCHER_PATCH, stride=MATCHER_PATCH // 2
             )
-            maps.append(heat)
-            if k % 10 == 0:
-                print(f"  matcher occlusion {k + 1}/{len(probe_idx)}")
-        maps = np.stack(maps)
-        INTERIM.mkdir(parents=True, exist_ok=True)
-        np.save(cache, maps)
+            np.save(path, heat)
+            print(f"  matcher occlusion {k + 1}/{len(probe_idx)}", flush=True)
+        maps.append(np.load(path))
+    maps = np.stack(maps)
 
     mean_map = maps.mean(axis=0)
     positive = np.clip(mean_map, 0, None)
@@ -316,7 +356,11 @@ def _write_csv(path: Path, rows: list[dict]) -> None:
 
 # --------------------------------------------------------------------------- latency
 def run_latency(repeats: int = 30, threads: int = 3) -> dict:
-    """Median wall-clock latency on this machine's CPU (batch 1 and batch 32)."""
+    """Wall-clock latency on this machine's CPU (batch 1 and batch 32).
+
+    On a shared machine the median mostly measures the neighbours; the minimum over repeats
+    is the closer estimate of the model's own cost, so both are recorded.
+    """
     model = vgg.load_vgg16(include_top=True)
     extractor = vgg.embedding_model(model)
     rng = np.random.default_rng(SEED)
@@ -326,6 +370,7 @@ def run_latency(repeats: int = 30, threads: int = 3) -> dict:
         "system": platform.system(),
         "threads": threads,
         "load_average_1min_at_start": os.getloadavg()[0],
+        "load_average_1min_at_end": None,
         "logical_cpus": os.cpu_count(),
         "repeats": repeats,
         "models": {},
@@ -343,7 +388,9 @@ def run_latency(repeats: int = 30, threads: int = 3) -> dict:
                 net(x, training=False)
                 times.append(time.perf_counter() - t0)
             entry[f"batch{batch}_median_ms"] = float(np.median(times) * 1000)
-            entry[f"batch{batch}_per_image_ms"] = float(np.median(times) * 1000 / batch)
+            entry[f"batch{batch}_min_ms"] = float(np.min(times) * 1000)
+            entry[f"batch{batch}_min_per_image_ms"] = float(np.min(times) * 1000 / batch)
         out["models"][name] = entry
+    out["load_average_1min_at_end"] = os.getloadavg()[0]
     _write_json("latency.json", out)
     return out
