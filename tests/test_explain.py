@@ -79,3 +79,15 @@ def test_redundancy_and_entropy_metrics_hand_checked():
     assert histogram_entropy(np.full((8, 8, 3), 0.3)) == 0.0
     halves = np.concatenate([np.zeros((4, 8, 3)), np.ones((4, 8, 3))])
     assert histogram_entropy(halves) == pytest.approx(1.0)
+
+
+def test_occlusion_reaches_the_edge_when_stride_does_not_divide_the_image():
+    image = np.zeros((45, 45, 3), np.uint8)
+    seen = []
+
+    def score(batch):
+        seen.append(batch.copy())
+        return np.zeros(len(batch))
+
+    occlusion_map(image, score, patch=10, stride=10, fill=7)
+    assert (np.concatenate(seen[1:])[:, 44, 44] == 7).any()

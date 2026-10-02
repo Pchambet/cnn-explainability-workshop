@@ -80,9 +80,10 @@ def identities(folder: Path, min_images: int, max_images: int | None = None) -> 
     return out
 
 
-def load_image(path: Path, crop: tuple[int, int, int, int] = CROP_BOX) -> np.ndarray:
+def load_image(path: Path, crop: tuple[int, int, int, int] | None = CROP_BOX) -> np.ndarray:
     with Image.open(path) as img:
-        return np.asarray(img.convert("RGB").crop(crop))
+        rgb = img.convert("RGB")
+        return np.asarray(rgb.crop(crop) if crop else rgb)
 
 
 def load_subset(

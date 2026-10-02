@@ -14,6 +14,7 @@ from collections.abc import Callable
 import keras
 import numpy as np
 import tensorflow as tf
+from PIL import Image
 
 
 def maximise_activation(
@@ -99,9 +100,7 @@ def occlusion_map(
     """
     h, w = image.shape[:2]
     base = float(score_fn(image[None])[0])
-    positions = [
-        (y, x) for y in range(0, h - patch + 1, stride) for x in range(0, w - patch + 1, stride)
-    ]
+    positions = [(y, x) for y in _starts(h, patch, stride) for x in _starts(w, patch, stride)]
     drops = np.empty(len(positions))
     for start in range(0, len(positions), batch_size):
         chunk = positions[start : start + batch_size]
@@ -114,6 +113,20 @@ def occlusion_map(
         total[y : y + patch, x : x + patch] += drop
         count[y : y + patch, x : x + patch] += 1
     return total / np.maximum(count, 1), base
+
+
+def _starts(length: int, patch: int, stride: int) -> list[int]:
+    """Patch offsets along one axis; a last patch flush with the edge leaves no strip unseen."""
+    starts = list(range(0, length - patch + 1, stride))
+    if starts[-1] != length - patch:
+        starts.append(length - patch)
+    return starts
+
+
+def upsample(heatmap: np.ndarray, size: tuple[int, int]) -> np.ndarray:
+    """Bilinear resize of a 2-D map to ``size`` = (height, width)."""
+    img = Image.fromarray(heatmap.astype("float32"), mode="F")
+    return np.asarray(img.resize((size[1], size[0]), Image.Resampling.BILINEAR))
 
 
 def region_mean(heatmap: np.ndarray, box: tuple[float, float, float, float]) -> float:
