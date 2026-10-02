@@ -19,8 +19,8 @@ lint:
 	uv run ruff check .
 	uv run ruff format --check .
 
-notebook:  ## re-execute the walkthrough notebook in place
-	uv run --group notebook jupyter nbconvert --to notebook --execute --inplace notebooks/walkthrough.ipynb
+notebook:  ## re-execute the walkthrough notebook in place, with the project kernel (not a user-level one)
+	JUPYTER_DATA_DIR=$(CURDIR)/.venv/share/jupyter uv run --group notebook jupyter nbconvert --to notebook --execute --inplace notebooks/walkthrough.ipynb
 
 clean:  ## drop cached embeddings (forces a full re-run)
 	rm -rf data/interim
