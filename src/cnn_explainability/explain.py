@@ -74,7 +74,7 @@ def histogram_entropy(image: np.ndarray, bins: int = 50) -> float:
 
 
 def mean_abs_correlation(images: np.ndarray) -> float:
-    """Mean |Pearson r| between all pairs of images: high means redundant visualisations."""
+    """Mean |Pearson r| between all pairs of images, pixel by pixel: high means similar images."""
     corr = np.corrcoef(images.reshape(len(images), -1))
     off_diagonal = ~np.eye(len(images), dtype=bool)
     return float(np.abs(corr[off_diagonal]).mean())
@@ -90,7 +90,7 @@ def grad_cam(model: keras.Model, inputs: np.ndarray, layer: str, class_index: in
     """
     head = model.layers[-1]
     if not isinstance(head, keras.layers.Dense):
-        raise ValueError(f"grad_cam needs a model ending in a Dense layer, got {head.name!r}")
+        raise TypeError(f"grad_cam needs a model ending in a Dense layer, got {head.name!r}")
     grad_model = keras.Model(model.input, [model.get_layer(layer).output, head.input])
     x = tf.convert_to_tensor(inputs)
     with tf.GradientTape() as tape:

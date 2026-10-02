@@ -18,7 +18,7 @@ from cnn_explainability.config import AMBER, FIGURES, GRID, INK, RESULTS, SLATE,
 
 REPRESENTATIONS = {
     # key: (label, colour, linestyle, marker)
-    "vgg16_flat": ("VGG16 pool5, flattened (v1 design)", TEAL, "-", "o"),
+    "vgg16_flat": ("VGG16 pool5, flattened", TEAL, "-", "o"),
     "vgg16_gap": ("VGG16 pool5, averaged", AMBER, "-", "s"),
     "eigenfaces": ("Eigenfaces (PCA-100)", SLATE, "--", "^"),
     "pixels": ("Raw pixels", SLATE, ":", "v"),
@@ -280,7 +280,7 @@ def filters(maps: np.lib.npyio.NpzFile, stats: dict) -> None:
                 spine.set_visible(False)
         corr = stats[layer]["mean_abs_correlation"]
         axes[row, 0].set_ylabel(
-            f"{layer}\n|r| = {corr:.2f}",
+            f"{layer}\n|r| = {corr:.2g}",
             fontsize=8,
             rotation=0,
             ha="right",
