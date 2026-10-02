@@ -9,3 +9,4 @@ data/interim/
 saved_model/
 .DS_Store
 .env
+site/figures/
