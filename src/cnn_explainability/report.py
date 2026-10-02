@@ -210,17 +210,17 @@ def _masked(portrait: dict, condition: str) -> dict:
 
 
 def v1_table(portrait: dict) -> str:
-    rows = [
-        [
-            figures.SHORT[m["condition"]],
-            m["top1"],
-            f"{m['top1_p']:.3f}",
-            f"{m['p_original_class']:.3f}",
-        ]
-        for m in portrait["masked_predictions"]
-    ]
+    preds = portrait["masked_predictions"]
     target = portrait["target_class"]
-    return _table(["Portrait", "ImageNet top-1", "p(top-1)", f"p({target})"], rows)
+    # The p(original class) column only adds information when some mask changes the label.
+    changed = any(m["top1"] != target for m in preds)
+    rows = [
+        [figures.SHORT[m["condition"]], m["top1"], f"{m['top1_p']:.3f}"]
+        + ([f"{m['p_original_class']:.3f}"] if changed else [])
+        for m in preds
+    ]
+    header = ["Portrait", "ImageNet top-1", "p(top-1)"] + ([f"p({target})"] if changed else [])
+    return _table(header, rows)
 
 
 def latency_table(latency: dict) -> str:
