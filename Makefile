@@ -6,7 +6,7 @@ setup:  ## install the locked environment
 data:  ## download LFW once (~230 MB, cached in data/raw/)
 	uv run cnn-xai data
 
-run:  ## all experiments -> results/ (about 1 h on a laptop CPU; embeddings cached in data/interim/)
+run:  ## all experiments -> results/ (roughly 1-2 h on a laptop CPU, 3 threads; embeddings cached in data/interim/)
 	uv run cnn-xai run
 
 report:  ## figures -> docs/figures/, HTML report -> site/index.html

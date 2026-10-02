@@ -1,7 +1,7 @@
 """Image obfuscations used to "anonymise" a face, applied to uint8 RGB arrays.
 
 Regions are fractional boxes ``(top, bottom, left, right)`` so one layout works at any
-resolution. LFW images are deep-funneled (aligned), so a single fixed layout places the bar
+resolution. LFW images are funneled (aligned), so a single fixed layout places the bar
 over the eyes of every face; the layout was read off the mean face of the evaluation subset
 (the hero figure draws the boxes on that mean face).
 """

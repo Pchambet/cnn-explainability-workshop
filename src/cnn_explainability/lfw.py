@@ -1,8 +1,10 @@
-"""Labeled Faces in the Wild (deep-funneled): idempotent download and a balanced subset loader.
+"""Labeled Faces in the Wild (funneled): idempotent download and a balanced subset loader.
 
-Source: Huang et al. (2007), http://vis-www.cs.umass.edu/lfw/ , mirrored on figshare by
-scikit-learn (same URL and checksum as ``sklearn.datasets.fetch_lfw_people``). LFW is a public
-research benchmark of news photographs of public figures; it is not redistributed here.
+Source: Huang et al. (2007), http://vis-www.cs.umass.edu/lfw/ , funneled release: faces aligned
+by the congealing of Huang, Jain & Learned-Miller (ICCV 2007), not the later deep-funneled set.
+Mirrored on figshare by scikit-learn (same URL and checksum as
+``sklearn.datasets.fetch_lfw_people``). LFW is a public research benchmark of news photographs
+of public figures; it is not redistributed here.
 
 The loader reads JPEGs directly instead of going through ``fetch_lfw_people`` because the
 latter materialises every image as float32 in memory (about 1 GB for the subset we need).

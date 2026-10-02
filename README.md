@@ -25,7 +25,7 @@ Eye bars and blurs are still used to publish faces "anonymously": in press photo
 
 ```mermaid
 flowchart LR
-    A[LFW deep-funneled<br/>62 people x 20 photos] --> B[mask the probe:<br/>eye bar, eyes+nose bar,<br/>blur, face blacked out]
+    A[LFW funneled<br/>62 people x 20 photos] --> B[mask the probe:<br/>eye bar, eyes+nose bar,<br/>blur, face blacked out]
     A --> C[one clean enrolment<br/>photo per person]
     B --> D[embed: VGG16 pool5,<br/>eigenfaces, pixels]
     C --> D
@@ -34,7 +34,7 @@ flowchart LR
     D --> G[occlusion of the matcher:<br/>which pixels carry identity]
 ```
 
-1. **Data.** [Labeled Faces in the Wild](http://vis-www.cs.umass.edu/lfw/), deep-funneled (aligned). The 62 people with at least 20 photos, first 20 photos each (1,240 images); crop with hair, ears and collar.
+1. **Data.** [Labeled Faces in the Wild](http://vis-www.cs.umass.edu/lfw/), funneled (aligned by congealing, Huang, Jain & Learned-Miller 2007). The 62 people with at least 20 photos, first 20 photos each (1,240 images); crop with hair, ears and collar.
 2. **Attack.** For each of 20 random draws, enrol one clean photo per person and match each of the 1,178 other photos, masked, to the nearest enrolled photo. All masks share the same draws, so comparisons between masks are paired.
 3. **Matchers.** VGG16 pool5 flattened (25,088-d, the design of the first version) or averaged (512-d); eigenfaces (PCA-100) fitted on 96 *other* LFW identities; raw grey pixels.
 4. **Explain.** Occlusion maps of the matcher's genuine similarity, averaged over the aligned faces; Grad-CAM, occlusion and activation maximisation on one portrait.
@@ -117,7 +117,7 @@ These numbers describe a clothing classifier's confidence; they cannot say wheth
 
 ```bash
 make setup     # uv sync --locked (Python 3.12, TensorFlow CPU)
-make data      # LFW deep-funneled, ~230 MB, checksum-verified, cached in data/raw/
+make data      # LFW funneled, ~230 MB, checksum-verified, cached in data/raw/
 make run       # all experiments -> results/ ; roughly 1-2 h on a laptop CPU (3 threads)
 make report    # figures -> docs/figures/, report -> site/index.html
 make test lint
@@ -156,7 +156,8 @@ assets/portrait.jpg
 
 ## References
 
-- Huang, Ramesh, Berg, Learned-Miller (2007). *Labeled Faces in the Wild: A Database for Studying Face Recognition in Unconstrained Environments.* UMass Amherst TR 07-49. Data: [vis-www.cs.umass.edu/lfw](http://vis-www.cs.umass.edu/lfw/) (mirror used by scikit-learn).
+- Huang, Ramesh, Berg, Learned-Miller (2007). *Labeled Faces in the Wild: A Database for Studying Face Recognition in Unconstrained Environments.* UMass Amherst TR 07-49. Data: [vis-www.cs.umass.edu/lfw](http://vis-www.cs.umass.edu/lfw/), funneled release `lfw-funneled.tgz` (mirror used by scikit-learn).
+- Huang, Jain, Learned-Miller (2007). *Unsupervised Joint Alignment of Complex Images.* ICCV. The alignment (funneling) applied to the LFW images used here.
 - Simonyan, Zisserman (2015). *Very Deep Convolutional Networks for Large-Scale Image Recognition.* ICLR. [arXiv:1409.1556](https://arxiv.org/abs/1409.1556)
 - Selvaraju et al. (2017). *Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization.* ICCV. [arXiv:1610.02391](https://arxiv.org/abs/1610.02391)
 - Zeiler, Fergus (2014). *Visualizing and Understanding Convolutional Networks.* ECCV. [arXiv:1311.2901](https://arxiv.org/abs/1311.2901)

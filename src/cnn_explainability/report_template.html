@@ -73,7 +73,7 @@ footer { margin-top: 56px; font-size: 0.85rem; color: var(--muted); }
 
 <h2>Protocol</h2>
 <ol>
-  <li><b>Data.</b> Labeled Faces in the Wild (deep-funneled, aligned): the $n_ids people with at least 20 photos, first 20 photos each ($n_images images). Crop includes hair, ears and collar.</li>
+  <li><b>Data.</b> Labeled Faces in the Wild (funneled, i.e. aligned): the $n_ids people with at least 20 photos, first 20 photos each ($n_images images). Crop includes hair, ears and collar.</li>
   <li><b>Attack.</b> One clean photo per person is enrolled; each of the other $n_probes photos is masked and matched to the closest enrolled photo by cosine similarity. Repeated over $n_draws random enrolment draws, the same draws for every mask (paired comparison).</li>
   <li><b>Matchers.</b> VGG16 pool5 features, flattened (25,088-d, the design of the first version of this workshop) or averaged (512-d); eigenfaces fitted on $n_fit_ids <em>other</em> LFW identities ($n_fit_images images); raw pixels.</li>
   <li><b>Masks.</b> Eye bar, eyes-and-nose bar, mild and strong Gaussian blur of the face, face blacked out. Masks are fixed boxes on the aligned crop.</li>
@@ -120,7 +120,8 @@ $lat_table
 
 <h2>References</h2>
 <ul>
-  <li>Huang, Ramesh, Berg, Learned-Miller (2007). Labeled Faces in the Wild. UMass Amherst TR 07-49.</li>
+  <li>Huang, Ramesh, Berg, Learned-Miller (2007). Labeled Faces in the Wild. UMass Amherst TR 07-49. Funneled release.</li>
+  <li>Huang, Jain, Learned-Miller (2007). Unsupervised Joint Alignment of Complex Images. ICCV.</li>
   <li>Simonyan, Zisserman (2015). Very Deep Convolutional Networks for Large-Scale Image Recognition. ICLR.</li>
   <li>Selvaraju et al. (2017). Grad-CAM. ICCV. <a href="https://arxiv.org/abs/1610.02391">arXiv:1610.02391</a></li>
   <li>Zeiler, Fergus (2014). Visualizing and Understanding Convolutional Networks. ECCV.</li>
