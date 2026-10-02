@@ -1,0 +1,30 @@
+{
+  "n_identities": 62,
+  "images_per_identity": 20,
+  "n_images": 1240,
+  "n_probes_per_draw": 1178,
+  "n_draws": 20,
+  "chance_rank1": 0.016129032258064516,
+  "baseline_fit_identities": 96,
+  "baseline_fit_images": 1301,
+  "v1_threshold": 0.5,
+  "matcher_occlusion": {
+    "n_identities": 62,
+    "patch": 40,
+    "stride": 20,
+    "regions": {
+      "eyes": {
+        "sensitivity_share": 0.12300897067348911,
+        "area_share": 0.105
+      },
+      "eyes_nose": {
+        "sensitivity_share": 0.2907430528419629,
+        "area_share": 0.22166666666666668
+      },
+      "face": {
+        "sensitivity_share": 0.5789238088628484,
+        "area_share": 0.42694444444444446
+      }
+    }
+  }
+}

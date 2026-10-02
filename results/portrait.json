@@ -1,0 +1,121 @@
+{
+  "params_total": 138357544,
+  "params_conv": 14714688,
+  "params_dense": 123642856,
+  "filters": {
+    "block1_conv2": {
+      "entropy_mean": 2.992442774839345,
+      "entropy_std": 1.1985739673655642,
+      "mean_abs_correlation": 0.35955227219992625,
+      "n_filters": 16
+    },
+    "block3_conv3": {
+      "entropy_mean": 4.180408559178702,
+      "entropy_std": 0.251464950365943,
+      "mean_abs_correlation": 0.028973520187340496,
+      "n_filters": 16
+    },
+    "block5_conv3": {
+      "entropy_mean": 4.147633625794806,
+      "entropy_std": 0.012077655005833634,
+      "mean_abs_correlation": 0.006954280009053846,
+      "n_filters": 16
+    }
+  },
+  "top5": [
+    {
+      "label": "jersey",
+      "p": 0.32470300793647766
+    },
+    {
+      "label": "sweatshirt",
+      "p": 0.07747764885425568
+    },
+    {
+      "label": "Band_Aid",
+      "p": 0.030240142717957497
+    },
+    {
+      "label": "torch",
+      "p": 0.017839856445789337
+    },
+    {
+      "label": "laptop",
+      "p": 0.01763150282204151
+    }
+  ],
+  "target_class": "jersey",
+  "gradcam_zone_means": {
+    "block3_conv3": {
+      "forehead_hair": 0.13400736451148987,
+      "eyes": 0.14408846199512482,
+      "nose": 0.23924097418785095,
+      "mouth_chin": 0.18276312947273254,
+      "neck_clothing": 0.04184700921177864
+    },
+    "block4_conv3": {
+      "forehead_hair": 0.06010080501437187,
+      "eyes": 0.02606869675219059,
+      "nose": 0.005624818615615368,
+      "mouth_chin": 0.02053092233836651,
+      "neck_clothing": 0.04600916802883148
+    },
+    "block5_conv3": {
+      "forehead_hair": 0.04617070406675339,
+      "eyes": 0.04595404490828514,
+      "nose": 0.055521123111248016,
+      "mouth_chin": 0.050613123923540115,
+      "neck_clothing": 0.24689684808254242
+    }
+  },
+  "occlusion_base_p": 0.32470300793647766,
+  "occlusion_zone_means": {
+    "forehead_hair": -0.0029113916379790153,
+    "eyes": -0.05946203450404071,
+    "nose": -0.060921992571761695,
+    "mouth_chin": -0.049706759916002694,
+    "neck_clothing": -0.0571196952746028
+  },
+  "peak_zones": {
+    "gradcam_block5_conv3": "neck_clothing",
+    "occlusion": "neck_clothing"
+  },
+  "masked_predictions": [
+    {
+      "condition": "none",
+      "top1": "jersey",
+      "top1_p": 0.32470300793647766,
+      "p_original_class": 0.32470300793647766
+    },
+    {
+      "condition": "eye_bar",
+      "top1": "jersey",
+      "top1_p": 0.08254380524158478,
+      "p_original_class": 0.08254380524158478
+    },
+    {
+      "condition": "eyes_nose_bar",
+      "top1": "jersey",
+      "top1_p": 0.2627822458744049,
+      "p_original_class": 0.2627822458744049
+    },
+    {
+      "condition": "blur_mild",
+      "top1": "candle",
+      "top1_p": 0.06862511485815048,
+      "p_original_class": 0.003210403025150299
+    },
+    {
+      "condition": "blur_strong",
+      "top1": "toilet_tissue",
+      "top1_p": 0.23603270947933197,
+      "p_original_class": 0.002591319615021348
+    },
+    {
+      "condition": "face_box",
+      "top1": "web_site",
+      "top1_p": 0.03259086236357689,
+      "p_original_class": 0.0013350005028769374
+    }
+  ]
+}

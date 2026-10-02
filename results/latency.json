@@ -1,0 +1,32 @@
+{
+  "machine": "arm64",
+  "processor": "arm",
+  "system": "Darwin",
+  "threads": 3,
+  "load_average_1min_at_start": 10.46630859375,
+  "load_average_1min_at_end": 20.95751953125,
+  "logical_cpus": 10,
+  "repeats": 30,
+  "models": {
+    "vgg16_classifier": {
+      "params": 138357544,
+      "float32_mb": 553.430176,
+      "batch1_median_ms": 3000.126041515614,
+      "batch1_min_ms": 421.7991250043269,
+      "batch1_min_per_image_ms": 421.7991250043269,
+      "batch32_median_ms": 12708.164708019467,
+      "batch32_min_ms": 9925.139250000939,
+      "batch32_min_per_image_ms": 310.16060156252934
+    },
+    "vgg16_pool5_extractor": {
+      "params": 14714688,
+      "float32_mb": 58.858752,
+      "batch1_median_ms": 242.88072899798863,
+      "batch1_min_ms": 220.782375021372,
+      "batch1_min_per_image_ms": 220.782375021372,
+      "batch32_median_ms": 12829.71395799541,
+      "batch32_min_ms": 9410.14795799856,
+      "batch32_min_per_image_ms": 294.067123687455
+    }
+  }
+}
