@@ -159,6 +159,13 @@ def key_facts(summary: list[dict], lfw: dict, portrait: dict, latency: dict) -> 
         "target": portrait["target_class"],
         "target_p": f"{portrait['top5'][0]['p']:.2f}",
         "peak_text": peak_text(portrait["peak_zones"]),
+        "occ_raised": _pct(portrait["occlusion_raise"]["share_of_pixels_raised"]),
+        "occ_median": f"{portrait['occlusion_raise']['median_change']:+.2f}",
+        "occ_max_raise": f"{portrait['occlusion_raise']['max_raise']:.2f}",
+        "eye_bar_p": f"{_masked(portrait, 'eye_bar')['p_original_class']:.2f}",
+        "corr_b1": f"{portrait['filters']['block1_conv2']['mean_abs_correlation']:.2g}",
+        "corr_b3": f"{portrait['filters']['block3_conv3']['mean_abs_correlation']:.2g}",
+        "corr_b5": f"{portrait['filters']['block5_conv3']['mean_abs_correlation']:.2g}",
         "tar_eig_clean": _pct(r("eigenfaces", "none", "tar_at_far_mean"), 1),
         "lat_b1": f"{flat['batch1_min_ms']:.0f}",
         "lat_b32": f"{flat['batch32_min_per_image_ms']:.0f}",
@@ -196,6 +203,10 @@ def attacker_table(summary: list[dict]) -> str:
                 ]
             )
     return _table(["Attacker", *figures.SHORT.values()], rows)
+
+
+def _masked(portrait: dict, condition: str) -> dict:
+    return next(m for m in portrait["masked_predictions"] if m["condition"] == condition)
 
 
 def v1_table(portrait: dict) -> str:

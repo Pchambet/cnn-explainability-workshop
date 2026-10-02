@@ -24,57 +24,63 @@
   },
   "top5": [
     {
-      "label": "jersey",
-      "p": 0.32470300793647766
+      "label": "loupe",
+      "p": 0.20711983740329742
     },
     {
-      "label": "sweatshirt",
-      "p": 0.07747764885425568
+      "label": "binoculars",
+      "p": 0.17245425283908844
     },
     {
-      "label": "Band_Aid",
-      "p": 0.030240142717957497
+      "label": "stethoscope",
+      "p": 0.11681977659463882
     },
     {
-      "label": "torch",
-      "p": 0.017839856445789337
+      "label": "lens_cap",
+      "p": 0.05289040878415108
     },
     {
-      "label": "laptop",
-      "p": 0.01763150282204151
+      "label": "rain_barrel",
+      "p": 0.02250000834465027
     }
   ],
-  "target_class": "jersey",
+  "target_class": "loupe",
   "gradcam_zone_means": {
     "block3_conv3": {
-      "forehead_hair": 0.13400736451148987,
-      "eyes": 0.14408846199512482,
-      "nose": 0.23924097418785095,
-      "mouth_chin": 0.18276312947273254,
-      "neck_clothing": 0.04184700921177864
+      "forehead_hair": 0.10476741194725037,
+      "eyes": 0.10439030826091766,
+      "nose": 0.12673507630825043,
+      "mouth_chin": 0.23945164680480957,
+      "neck_clothing": 0.11412722617387772
     },
     "block4_conv3": {
-      "forehead_hair": 0.06010080501437187,
-      "eyes": 0.02606869675219059,
-      "nose": 0.005624818615615368,
-      "mouth_chin": 0.02053092233836651,
-      "neck_clothing": 0.04600916802883148
+      "forehead_hair": 0.13730262219905853,
+      "eyes": 0.021243488416075706,
+      "nose": 0.0236294437199831,
+      "mouth_chin": 0.16455119848251343,
+      "neck_clothing": 0.13638760149478912
     },
     "block5_conv3": {
-      "forehead_hair": 0.04617070406675339,
-      "eyes": 0.04595404490828514,
-      "nose": 0.055521123111248016,
-      "mouth_chin": 0.050613123923540115,
-      "neck_clothing": 0.24689684808254242
+      "forehead_hair": 0.028531808406114578,
+      "eyes": 0.023374363780021667,
+      "nose": 0.011018428020179272,
+      "mouth_chin": 0.023416755720973015,
+      "neck_clothing": 0.2340395748615265
     }
   },
-  "occlusion_base_p": 0.32470300793647766,
+  "occlusion_base_p": 0.20711983740329742,
   "occlusion_zone_means": {
-    "forehead_hair": -0.0029113916379790153,
-    "eyes": -0.05946203450404071,
-    "nose": -0.060921992571761695,
-    "mouth_chin": -0.049706759916002694,
-    "neck_clothing": -0.0571196952746028
+    "forehead_hair": -0.03948282899219852,
+    "eyes": -0.13356241742001165,
+    "nose": -0.20351409621223138,
+    "mouth_chin": -0.19333069551710463,
+    "neck_clothing": -6.328211130952477e-05
+  },
+  "occlusion_raise": {
+    "share_of_pixels_raised": 0.7551020408163265,
+    "median_change": 0.040128378197550774,
+    "max_raise": 0.27427738532423973,
+    "max_drop": 0.16459397971630096
   },
   "peak_zones": {
     "gradcam_block5_conv3": "neck_clothing",
@@ -83,39 +89,39 @@
   "masked_predictions": [
     {
       "condition": "none",
-      "top1": "jersey",
-      "top1_p": 0.32470300793647766,
-      "p_original_class": 0.32470300793647766
+      "top1": "loupe",
+      "top1_p": 0.20711983740329742,
+      "p_original_class": 0.20711983740329742
     },
     {
       "condition": "eye_bar",
-      "top1": "jersey",
-      "top1_p": 0.08254380524158478,
-      "p_original_class": 0.08254380524158478
+      "top1": "loupe",
+      "top1_p": 0.45171433687210083,
+      "p_original_class": 0.45171433687210083
     },
     {
       "condition": "eyes_nose_bar",
-      "top1": "jersey",
-      "top1_p": 0.2627822458744049,
-      "p_original_class": 0.2627822458744049
+      "top1": "loupe",
+      "top1_p": 0.620826244354248,
+      "p_original_class": 0.620826244354248
     },
     {
       "condition": "blur_mild",
-      "top1": "candle",
-      "top1_p": 0.06862511485815048,
-      "p_original_class": 0.003210403025150299
+      "top1": "loupe",
+      "top1_p": 0.5590904355049133,
+      "p_original_class": 0.5590904355049133
     },
     {
       "condition": "blur_strong",
-      "top1": "toilet_tissue",
-      "top1_p": 0.23603270947933197,
-      "p_original_class": 0.002591319615021348
+      "top1": "loupe",
+      "top1_p": 0.6474373936653137,
+      "p_original_class": 0.6474373936653137
     },
     {
       "condition": "face_box",
-      "top1": "web_site",
-      "top1_p": 0.03259086236357689,
-      "p_original_class": 0.0013350005028769374
+      "top1": "loupe",
+      "top1_p": 0.6490116715431213,
+      "p_original_class": 0.6490116715431213
     }
   ]
 }

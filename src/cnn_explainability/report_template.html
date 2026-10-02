@@ -100,10 +100,11 @@ $attacker_table
 
 <h2>What an ImageNet CNN sees in a portrait</h2>
 <figure><img src="figures/portrait_explanations.png" alt="Grad-CAM at three depths and occlusion on a portrait"></figure>
-<p>VGG16 knows 1,000 ImageNet classes and no identities, so on a portrait it predicts <b>$target</b> (p = $target_p); $peak_text. Occlusion is not monotone here: hiding most patches slightly <em>raises</em> p($target), a reminder that a single-image map is an illustration, not evidence. The first version of this workshop masked this portrait and reported the change in that probability. That measures a clothing classifier, not re-identification, which is why the LFW experiment above replaces it. For the record:</p>
+<p>VGG16 knows 1,000 ImageNet classes and no identities, so on a portrait it predicts <b>$target</b> (p = $target_p); $peak_text. Occlusion is not monotone here: on $occ_raised of the image, the patches covering a pixel <em>raise</em> p($target) on average (median change $occ_median, up to +$occ_max_raise on a base of $target_p), a reminder that a single-image map is an illustration, not evidence.</p>
+<p>The first version of this workshop masked a portrait and read the drop in its top ImageNet probability ("jersey", 0.381 → 0.082 under the eye bar) as proof that the bar fails against CNNs. That measures an object classifier, not re-identification, which is why the LFW experiment above replaces it. Its portrait had no traceable source or licence, so it was replaced by this public-domain NASA photograph; repeated here, the same measurement even goes the other way (p($target) $target_p → $eye_bar_p under the eye bar). For the record:</p>
 $v1_table
 <figure><img src="figures/filters.png" alt="Activation-maximisation images for filters of three VGG16 layers"></figure>
-<p>Filters go from colours and oriented edges (block1) to textures (block3) and object parts (block5); the mean absolute correlation between visualisations falls with depth (shown per row), i.e. deeper filters are less redundant. VGG16 holds $params M parameters, $dense_share of them in the three dense layers that the matcher discards.</p>
+<p>Filters go from colours and oriented edges (block1) to textures (block3) and object parts (block5). The visualisations of 16 filters per layer also become less correlated pixel by pixel with depth (mean |r| $corr_b1 → $corr_b3 → $corr_b5, shown per row). That describes the images, not the filters: near-uniform colour fields correlate through their shared colour balance, high-frequency textures hardly correlate at all, so it is not a measure of functional redundancy. VGG16 holds $params M parameters, $dense_share of them in the three dense layers that the matcher discards.</p>
 
 <h2>Cost</h2>
 $lat_table
@@ -116,6 +117,7 @@ $lat_table
   <li>Masks are fixed boxes on aligned faces; real eye bars are drawn per photo and may be tighter or looser.</li>
   <li>Intervals reflect enrolment-photo variability only, not the sampling of identities.</li>
   <li>Grad-CAM and occlusion on the portrait are single-image illustrations, not evidence.</li>
+  <li>Portrait: Eileen Collins, NASA official portrait (public domain), as shipped with scikit-image (<code>skimage.data.astronaut</code>), cropped to head and shoulders.</li>
 </ul>
 
 <h2>References</h2>

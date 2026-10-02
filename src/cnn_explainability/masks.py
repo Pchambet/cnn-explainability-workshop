@@ -28,11 +28,11 @@ LFW_LAYOUT = FaceLayout(
     eyes_nose=(0.32, 0.64, 0.15, 0.85),
     face=(0.18, 0.82, 0.17, 0.83),
 )
-# Layout of the original workshop on the single portrait (full-width bars).
+# Layout on the single portrait (assets/portrait.jpg), full-width bars as in the original workshop.
 PORTRAIT_LAYOUT = FaceLayout(
-    eyes=(0.28, 0.42, 0.0, 1.0),
-    eyes_nose=(0.28, 0.58, 0.0, 1.0),
-    face=(0.15, 0.80, 0.10, 0.90),
+    eyes=(0.30, 0.39, 0.0, 1.0),
+    eyes_nose=(0.30, 0.45, 0.0, 1.0),
+    face=(0.22, 0.60, 0.26, 0.74),
 )
 
 # Condition name -> human label, in the order they are reported.

@@ -15,7 +15,7 @@ Does a black bar over the eyes stop a CNN from recognising a face? A one-shot re
 - **A free counter-move cancels it.** If the attacker draws the same bar on the enrolment photo, eye-barred probes are re-identified at 17.2% (flattened features) and 18.4% (averaged features).
 - **What the bar does break is a fixed threshold.** It lowers every similarity score, so a verifier frozen at a 1% false-accept rate goes from accepting 5.1% of genuine pairs to 0.1%. Ranking, which is what an attacker uses, is barely affected (AUC 0.69 → 0.67).
 - **Why:** occlusion on the matcher puts 12% of its sensitivity in the eye band, which covers 10% of the image: about its fair share. The same bar moved down over the mouth would hide 18%.
-- **The original version of this workshop measured the wrong thing.** It reported how the ImageNet probability of "jersey" changed when a portrait's eyes were masked; that describes a clothing classifier, not identity. It is kept below for the record and replaced by the experiment above.
+- **The first version of this workshop measured the wrong thing** (an ImageNet label's confidence on one masked portrait, not identity); the experiment above replaces it.
 
 ## Why it matters
 
@@ -45,7 +45,7 @@ flowchart LR
 
 | Matcher | No mask | Eye bar | Eyes + nose | Mild blur | Strong blur | Face blacked out |
 |---|--:|--:|--:|--:|--:|--:|
-| VGG16 pool5, flattened (v1 design) | **17.5%** [15%, 20%] | **13.9%** [12%, 16%] | 13.1% [11%, 15%] | 13.8% [11%, 17%] | 12.8% [10%, 15%] | 10.8% [8%, 13%] |
+| VGG16 pool5, flattened | **17.5%** [15%, 20%] | **13.9%** [12%, 16%] | 13.1% [11%, 15%] | 13.8% [11%, 17%] | 12.8% [10%, 15%] | 10.8% [8%, 13%] |
 | VGG16 pool5, averaged | 16.7% [14%, 19%] | 12.7% [10%, 15%] | 10.7% [7%, 14%] | 9.5% [7%, 12%] | 6.6% [4%, 9%] | 5.4% [2%, 7%] |
 | Eigenfaces (PCA-100) | 11.6% [9%, 13%] | 6.3% [3%, 8%] | 4.7% [2%, 6%] | 10.2% [7%, 12%] | 6.9% [5%, 9%] | 5.1% [4%, 6%] |
 | Raw pixels | 9.5% [8%, 11%] | 8.6% [7%, 10%] | 6.4% [5%, 8%] | 8.9% [7%, 10%] | 8.1% [6%, 9%] | 4.0% [3%, 6%] |
@@ -81,24 +81,24 @@ With a threshold calibrated on unmasked photos at a 1% false-accept rate and the
 
 ![Grad-CAM at three depths and occlusion on a portrait](docs/figures/portrait_explanations.png)
 
-VGG16 knows 1,000 ImageNet classes and no identities, so on a portrait it predicts a clothing class. Grad-CAM at block5 and occlusion both peak on the T-shirt collar; block3 Grad-CAM spreads over facial texture. Occlusion is not monotone here: hiding most patches *raises* p(jersey) slightly, a reminder that a single-image map is an illustration, not evidence.
+VGG16 knows 1,000 ImageNet classes and no identities, so on a portrait it predicts an object: "loupe" (p = 0.21). Grad-CAM at block5 and occlusion both peak on the round metal neck ring of the spacesuit, not on the face; block3 Grad-CAM follows edges (hair outline, ring, background). Occlusion is not monotone here: on 76% of the image, the patches covering a pixel *raise* p(loupe) on average (median change +0.04, up to +0.27 on a base of 0.21), a reminder that a single-image map is an illustration, not evidence. Grad-CAM uses the pre-softmax class score, as in Selvaraju et al. The portrait is the public-domain NASA photograph of astronaut Eileen Collins (`skimage.data.astronaut`), cropped to head and shoulders.
 
 ![Activation maximisation for filters of three VGG16 layers](docs/figures/filters.png)
 
-Activation maximisation (gradient ascent on the input, pre-ReLU objective) shows colours and oriented edges in block1, repeating textures in block3 and object parts in block5. The mean absolute correlation between the visualisations of 16 filters falls from 0.36 (block1) to 0.03 (block3) and 0.007 (block5): deeper filters are far less redundant. 89% of VGG16's 138.4 M parameters sit in the three dense layers that the matcher discards.
+Activation maximisation (gradient ascent on the input, pre-ReLU objective) shows colours and oriented edges in block1, repeating textures in block3 and object parts in block5. The visualisations of 16 filters per layer become less correlated pixel by pixel with depth (mean |r| 0.36 → 0.029 → 0.007). That describes the images, not the filters: near-uniform colour fields correlate through their shared colour balance and high-frequency textures hardly correlate at all, so it is not a measure of functional redundancy. 89% of VGG16's 138.4 M parameters sit in the three dense layers that the matcher discards.
 
-**The first version's measurement, for the record.** ImageNet top-1 on the portrait under each mask:
+**The first version's measurement, for the record.** It masked a portrait and read the drop in its top ImageNet probability ("jersey", 0.381 → 0.082 under the eye bar) as proof that the bar fails against CNNs. That portrait had no traceable source or licence and was replaced. Repeated on the new one, the same measurement goes the other way:
 
-| Portrait | ImageNet top-1 | p(top-1) | p(jersey) |
-|---|---|--:|--:|
-| No mask | jersey | 0.325 | 0.325 |
-| Eye bar | jersey | 0.083 | 0.083 |
-| Eyes + nose | jersey | 0.263 | 0.263 |
-| Mild blur | candle | 0.069 | 0.003 |
-| Strong blur | toilet_tissue | 0.236 | 0.003 |
-| Face blacked out | web_site | 0.033 | 0.001 |
+| Portrait | ImageNet top-1 | p(top-1) |
+|---|---|--:|
+| No mask | loupe | 0.207 |
+| Eye bar | loupe | 0.452 |
+| Eyes + nose | loupe | 0.621 |
+| Mild blur | loupe | 0.559 |
+| Strong blur | loupe | 0.647 |
+| Face blacked out | loupe | 0.649 |
 
-These numbers describe a clothing classifier's confidence; they cannot say whether the person is still recognisable. (The first version reported 0.381 → 0.082 for the eye bar; the small difference in the unmasked value comes from the image resizing library.)
+Hiding the face makes VGG16 *more* confident in an object it sees in the spacesuit. These numbers describe an object classifier's confidence; they cannot say whether the person is still recognisable.
 
 **Cost.** VGG16 has 138.4 M parameters (553 MB of float32 weights); the pool5 extractor keeps 14.7 M (59 MB). On the laptop CPU used here (3 TensorFlow threads, other jobs running, load average 10-21 on 10 cores), the best of 30 single-image runs took 422 ms for the classifier and 221 ms for the extractor, and the best of 5 batches of 32 took 294-310 ms per image; medians were higher and unstable, so these are upper bounds for this machine, not a benchmark (raw numbers in [`results/latency.json`](results/latency.json)). Quantisation and TF-Lite were not tried.
 
@@ -112,6 +112,7 @@ These numbers describe a clothing classifier's confidence; they cannot say wheth
 | Latency ~50 ms, ~15 ms after TF-Lite; 130 MB quantised | Measured on CPU (above); quantisation not done, so no number is given |
 | Deep filters visualised (they were noise) | Fixed preprocessing and pre-ReLU objective; block5 now shows object parts |
 | "Shrutin et al. (2019)" | Nagpal, Singh, Singh, Vatsa (2019) |
+| Portrait of unknown source and licence | Public-domain NASA portrait (`skimage.data.astronaut`) |
 
 ## Reproduce
 
@@ -141,7 +142,7 @@ tests/             unit tests on hand-checked cases and known-answer models
 results/           small result files used by the README and the report
 docs/figures/      figures
 notebooks/         walkthrough
-assets/portrait.jpg
+assets/portrait.jpg  public-domain NASA portrait (source in assets/README.md)
 ```
 
 ## Methodology notes and limitations
@@ -165,6 +166,7 @@ assets/portrait.jpg
 - McPherson, Shokri, Shmatikov (2016). *Defeating Image Obfuscation with Deep Learning.* [arXiv:1609.00408](https://arxiv.org/abs/1609.00408)
 - Nagpal, Singh, Singh, Vatsa (2019). *Deep Learning for Face Recognition: Pride or Prejudiced?* [arXiv:1904.01219](https://arxiv.org/abs/1904.01219)
 - CNIL LINC, Biéri & Léautier (2023). [*Protection des témoins : casser la voix et l'image*](https://linc.cnil.fr/protection-des-temoins-casser-la-voix-et-limage).
+- Portrait: Eileen Collins, NASA official portrait, public domain, as distributed with scikit-image ([`skimage.data.astronaut`](https://scikit-image.org/docs/stable/api/skimage.data.html#skimage.data.astronaut)).
 - Keras examples: [visualising what convnets learn](https://keras.io/examples/vision/visualizing_what_convnets_learn/), [Grad-CAM](https://keras.io/examples/vision/grad_cam/).
 
 ---

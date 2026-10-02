@@ -37,13 +37,13 @@ INTERIM = ROOT / "data" / "interim"
 FILTER_LAYERS = ["block1_conv2", "block3_conv3", "block5_conv3"]
 CAM_LAYERS = ["block3_conv3", "block4_conv3", "block5_conv3"]
 # Anatomical zones on the 224 x 224 portrait, (top, bottom, left, right) fractions, read off
-# the resized image (the hairline, eyes, nose, mouth, chin and collar of this particular photo).
+# the resized image (the hair, eyes, nose, mouth, chin and suit collar of this particular photo).
 PORTRAIT_ZONES = {
-    "forehead_hair": (0.0, 0.28, 0.0, 1.0),
-    "eyes": (0.28, 0.40, 0.15, 0.85),
-    "nose": (0.40, 0.48, 0.30, 0.70),
-    "mouth_chin": (0.48, 0.60, 0.20, 0.80),
-    "neck_clothing": (0.60, 1.0, 0.0, 1.0),
+    "forehead_hair": (0.0, 0.30, 0.0, 1.0),
+    "eyes": (0.30, 0.38, 0.25, 0.75),
+    "nose": (0.38, 0.44, 0.38, 0.62),
+    "mouth_chin": (0.44, 0.58, 0.30, 0.70),
+    "neck_clothing": (0.58, 1.0, 0.0, 1.0),
 }
 V1_THRESHOLD = 0.5  # rejection threshold hard-coded in the original FaceRecognizer
 GALLERY_PROBE_PAIR = (0, 1)  # file indices per identity used for the matcher occlusion maps
@@ -102,6 +102,13 @@ def run_portrait() -> dict:
 
     occlusion, base = explain.occlusion_map(image, class_prob, patch=32, stride=16)
     occ_zones = {zone: explain.region_mean(occlusion, box) for zone, box in PORTRAIT_ZONES.items()}
+    # Occlusion is not monotone on a classifier: hiding a patch can also raise the probability.
+    occ_raise = {
+        "share_of_pixels_raised": float((occlusion < 0).mean()),
+        "median_change": float(-np.median(occlusion)),
+        "max_raise": float(-occlusion.min()),
+        "max_drop": float(occlusion.max()),
+    }
     peaks = {
         "gradcam_block5_conv3": peak_zone(cams["block5_conv3"]),
         "occlusion": peak_zone(occlusion),
@@ -138,6 +145,7 @@ def run_portrait() -> dict:
         "gradcam_zone_means": cam_zones,
         "occlusion_base_p": base,
         "occlusion_zone_means": occ_zones,
+        "occlusion_raise": occ_raise,
         "peak_zones": peaks,
         "masked_predictions": masked_preds,
     }
