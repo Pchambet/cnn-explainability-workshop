@@ -44,6 +44,11 @@ def preprocess(images: np.ndarray) -> np.ndarray:
     return keras.applications.vgg16.preprocess_input(images.astype("float32"))
 
 
+def preprocess_unit(images: tf.Tensor) -> tf.Tensor:
+    """Differentiable preprocessing for images in [0, 1] (used by activation maximisation)."""
+    return keras.applications.vgg16.preprocess_input(images * 255.0)
+
+
 def decode_top1(probs: np.ndarray) -> list[tuple[str, float]]:
     decoded = keras.applications.vgg16.decode_predictions(probs, top=1)
     return [(label, float(score)) for _, label, score in (row[0] for row in decoded)]

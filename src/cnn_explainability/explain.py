@@ -25,24 +25,34 @@ def maximise_activation(
     steps: int = 30,
     lr: float = 10.0,
     seed: int = 0,
+    preprocess: Callable[[tf.Tensor], tf.Tensor] | None = None,
 ) -> np.ndarray:
     """Gradient ascent in pixel space, one image per filter, optimised as a single batch.
 
+    The image lives in [0, 1]; ``preprocess`` maps it to what the network was trained on
+    (for VGG16, 0-255 BGR minus the ImageNet mean). Skipping that step feeds a near-constant
+    image whose deep ReLUs are all zero, so their filters never receive a gradient.
     VGG16 has no batch normalisation, so images in a batch do not interact and each gradient
     only reflects its own filter. Gradients are L2-normalised per image so the step size does
     not depend on the activation scale, which differs by orders of magnitude across depths.
     Returns float images in [0, 1], shape (len(filters), size, size, 3).
     """
-    extractor = keras.Model(model.input, model.get_layer(layer).output)
+    conv = model.get_layer(layer)
+    # Maximise the pre-ReLU response: after the ReLU, a filter that is silent on the noise
+    # start has a zero gradient everywhere and never moves (most of block5 in VGG16).
+    upstream = keras.Model(model.input, conv.input)
+    padding = conv.padding.upper()
     rng = np.random.default_rng(seed)
-    start = rng.uniform(0.5, 0.75, size=(len(filters), size, size, 3)).astype("float32")
+    start = rng.uniform(0.4, 0.6, size=(len(filters), size, size, 3)).astype("float32")
     image = tf.Variable(start)
-    one_hot = tf.one_hot(filters, extractor.output.shape[-1])  # (n, channels)
+    one_hot = tf.one_hot(filters, conv.filters)  # (n, channels)
 
     @tf.function
     def step() -> None:
         with tf.GradientTape() as tape:
-            act = extractor(image, training=False)[:, 2:-2, 2:-2, :]  # drop border artefacts
+            x = preprocess(image) if preprocess is not None else image
+            pre = tf.nn.conv2d(upstream(x, training=False), conv.kernel, 1, padding) + conv.bias
+            act = pre[:, 2:-2, 2:-2, :]  # drop border artefacts
             per_image = tf.reduce_mean(act, axis=(1, 2))  # (n, channels)
             loss = tf.reduce_sum(per_image * one_hot)
         grads = tape.gradient(loss, image)

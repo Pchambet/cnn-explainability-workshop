@@ -91,3 +91,14 @@ def test_occlusion_reaches_the_edge_when_stride_does_not_divide_the_image():
 
     occlusion_map(image, score, patch=10, stride=10, fill=7)
     assert (np.concatenate(seen[1:])[:, 44, 44] == 7).any()
+
+
+def test_activation_maximisation_moves_a_filter_that_is_dead_at_the_start():
+    # Large negative bias: the ReLU output is 0 on the start image, so only the pre-ReLU
+    # objective can tell the optimiser which way to go.
+    inputs = keras.Input((None, None, 3))
+    conv = keras.layers.Conv2D(1, 1, activation="relu", name="dead")
+    model = keras.Model(inputs, conv(inputs))
+    conv.set_weights([np.array([1.0, 0.0, -1.0], "float32").reshape(1, 1, 3, 1), np.full(1, -50.0)])
+    img = maximise_activation(model, "dead", [0], size=16, steps=20, lr=1.0)[0]
+    assert img[..., 0].mean() > img[..., 2].mean()
