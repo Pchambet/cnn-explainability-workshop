@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eye Bars vs CNNs</title>
+<meta name="description" content="Does an eye bar stop an ImageNet CNN from re-identifying a face? A one-shot experiment on LFW, with Grad-CAM and occlusion explanations.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="$plotly"></script>
+<style>
+:root {
+  --bg: #ffffff; --ink: #0f172a; --muted: #64748b; --rule: #e2e8f0; --panel: #f8fafc;
+  --teal: #0d9488; --amber: #d97706; --slate: #64748b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b1120; --ink: #e2e8f0; --muted: #94a3b8; --rule: #1e293b; --panel: #111827;
+    --teal: #2dd4bf; --amber: #f59e0b; --slate: #94a3b8;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b1120; --ink: #e2e8f0; --muted: #94a3b8; --rule: #1e293b; --panel: #111827;
+  --teal: #2dd4bf; --amber: #f59e0b; --slate: #94a3b8;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 16px/1.65 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+main { max-width: 860px; margin: 0 auto; padding: 48px 16px 80px; }
+h1 { font-size: 2rem; line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.01em; }
+h2 { font-size: 1.3rem; margin: 48px 0 8px; padding-top: 16px; border-top: 1px solid var(--rule); }
+h3 { font-size: 1.05rem; margin: 28px 0 4px; }
+p, li { color: var(--ink); }
+.lede { font-size: 1.1rem; color: var(--muted); margin: 0 0 24px; }
+.meta { font-size: 0.85rem; color: var(--muted); }
+a { color: var(--teal); }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 24px 0; }
+.kpi { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 16px; }
+.kpi b { display: block; font-size: 1.6rem; line-height: 1.2; }
+.kpi span { font-size: 0.85rem; color: var(--muted); }
+.chart { width: 100%; height: 420px; margin: 8px 0 4px; }
+.caption { font-size: 0.85rem; color: var(--muted); margin: 0 0 20px; }
+figure { margin: 16px 0 24px; }
+figure img { width: 100%; height: auto; border-radius: 8px; background: #fff; }
+.table { overflow-x: auto; margin: 12px 0 20px; }
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th { color: var(--muted); font-weight: 600; }
+code { font-size: 0.9em; background: var(--panel); padding: 1px 5px; border-radius: 4px; }
+pre { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; overflow-x: auto; }
+footer { margin-top: 56px; font-size: 0.85rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+<p class="meta">Report · LFW one-shot re-identification · VGG16 (ImageNet)</p>
+<h1>Does an eye bar stop a CNN from recognising a face?</h1>
+<p class="lede">Not this one. With one clean photo per person, an off-the-shelf ImageNet VGG16 still re-identifies $flat_eye of eye-barred faces among $n_ids people ($flat_clean without the bar, chance $chance_pct). Explainability methods show why: the matcher spreads its evidence well beyond the eyes.</p>
+
+<div class="kpis">
+  <div class="kpi"><b>$flat_clean → $flat_eye</b><span>rank-1 accuracy, no mask → eye bar</span></div>
+  <div class="kpi"><b>$flat_eye_kept</b><span>of the unmasked accuracy survives the bar</span></div>
+  <div class="kpi"><b>$flat_eye_matched</b><span>if the attacker bars the enrolment photo too</span></div>
+  <div class="kpi"><b>$eye_sens</b><span>of the matcher's occlusion sensitivity sits in the eye band ($eye_area of the image)</span></div>
+</div>
+
+<h2>The question</h2>
+<p>A black bar across the eyes is the oldest way to "anonymise" a face in a photo. The CNIL's innovation lab notes that it "may be ineffective against a facial recognition algorithm, which could find enough markers on the face to identify the person" (LINC, 2023). This report measures that claim for a generic CNN: if someone holds one ordinary photo of each person, can they still name the person behind the bar?</p>
+
+<h2>Protocol</h2>
+<ol>
+  <li><b>Data.</b> Labeled Faces in the Wild (deep-funneled, aligned): the $n_ids people with at least 20 photos, first 20 photos each ($n_images images). Crop includes hair, ears and collar.</li>
+  <li><b>Attack.</b> One clean photo per person is enrolled; each of the other $n_probes photos is masked and matched to the closest enrolled photo by cosine similarity. Repeated over $n_draws random enrolment draws, the same draws for every mask (paired comparison).</li>
+  <li><b>Matchers.</b> VGG16 pool5 features, flattened (25,088-d, the design of the first version of this workshop) or averaged (512-d); eigenfaces fitted on $n_fit_ids <em>other</em> LFW identities ($n_fit_images images); raw pixels.</li>
+  <li><b>Masks.</b> Eye bar, eyes-and-nose bar, mild and strong Gaussian blur of the face, face blacked out. Masks are fixed boxes on the aligned crop.</li>
+</ol>
+
+<h2>Result: the bar dents accuracy, it does not remove it</h2>
+<div id="rank1" class="chart" role="img" aria-label="Rank-1 accuracy by mask and matcher"></div>
+<p class="caption">Mean over $n_draws enrolment draws; error bars span the 2.5–97.5 percentiles of the draws. Dotted line: chance ($chance_pct).</p>
+$rank1_table
+<p>The flattened VGG16 matcher keeps $flat_eye of $flat_clean under the eye bar, $flat_eye_x_chance times chance. A wider bar over the eyes and nose leaves $flat_eyes_nose, mild blur $flat_mild, strong blur $flat_strong and a blacked-out face $flat_face: what remains comes from hair, face outline, collar and the photo itself. Keeping the spatial layout (flattened) makes the matcher markedly more robust to blur than averaging it away. Eigenfaces start lower ($eig_clean) and fall to $eig_eye with the bar.</p>
+
+<h3>A free counter-move: bar the enrolment photo too</h3>
+<p>The bar creates a mismatch between a masked probe and an unmasked reference. An attacker can remove that mismatch by drawing the same bar on the reference. Then the flattened matcher re-identifies $flat_eye_matched of barred probes and the averaged one $gap_eye_matched: back at, or above, their unmasked accuracy.</p>
+$attacker_table
+
+<h3>What the bar does break: a fixed threshold</h3>
+<div id="tar" class="chart" role="img" aria-label="True-accept rate at 1% false-accept rate by mask"></div>
+<p class="caption">Threshold calibrated on unmasked photos at a 1% false-accept rate, then frozen.</p>
+<p>A verifier that says "same person" above a threshold accepts only $tar_flat_clean of genuine pairs at 1% false accepts even without a mask (this is not a face model), and $tar_flat_eye with the bar: the bar lowers every similarity score, impostors included, so a frozen threshold rejects nearly everything. That is a calibration effect, not anonymity: ranking barely moves (AUC $flat_auc_clean → $flat_auc_eye) and an attacker simply recalibrates. Unmasked, eigenfaces are the better verifier at this operating point ($tar_eig_clean) even though the CNN is the better identifier. The first version's fixed threshold of 0.5 accepted $v1_tar of genuine pairs and $v1_far of impostors.</p>
+
+<h2>Why: where the matcher looks</h2>
+<figure><img src="figures/matcher_occlusion.png" alt="Average occlusion sensitivity of the matcher over the average face"></figure>
+<p>Hiding a 40-pixel patch of the probe and measuring the drop in similarity to the enrolled photo, averaged over the $n_ids aligned identities, gives the matcher's sensitivity map. The eye band holds $eye_sens of it for $eye_area of the image area, roughly its fair share; the peak sits at mouth level. An eye bar hides the part of the face this matcher needs least.</p>
+
+<h2>What an ImageNet CNN sees in a portrait</h2>
+<figure><img src="figures/portrait_explanations.png" alt="Grad-CAM at three depths and occlusion on a portrait"></figure>
+<p>VGG16 knows 1,000 ImageNet classes and no identities, so on a portrait it predicts <b>$target</b> (p = $target_p); $peak_text. Occlusion is not monotone here: hiding most patches slightly <em>raises</em> p($target), a reminder that a single-image map is an illustration, not evidence. The first version of this workshop masked this portrait and reported the change in that probability. That measures a clothing classifier, not re-identification, which is why the LFW experiment above replaces it. For the record:</p>
+$v1_table
+<figure><img src="figures/filters.png" alt="Activation-maximisation images for filters of three VGG16 layers"></figure>
+<p>Filters go from colours and oriented edges (block1) to textures (block3) and object parts (block5); the mean absolute correlation between visualisations falls with depth (shown per row), i.e. deeper filters are less redundant. VGG16 holds $params M parameters, $dense_share of them in the three dense layers that the matcher discards.</p>
+
+<h2>Cost</h2>
+$lat_table
+<p class="caption">Wall-clock on a $lat_cpus-core laptop CPU with $lat_threads TensorFlow threads, measured while other jobs were running (1-minute load average $lat_load at the start, $lat_load_end at the end). The best of the repeats is the closer estimate of the model's own cost; the median shows how much a busy machine adds. Read them as upper bounds for this machine, not as a benchmark. Quantisation and TF-Lite were not tried, so no number is given for them.</p>
+
+<h2>Limitations</h2>
+<ul>
+  <li>The matcher is a generic ImageNet network, not a face recogniser. A dedicated model (e.g. ArcFace) is far stronger; whether it relies more or less on the eyes was not tested here.</li>
+  <li>62 identities of public figures, mostly news photos; many photos of one person come from the same event, which helps a matcher through background and clothing. That is realistic for an attacker but inflates what "identity" means.</li>
+  <li>Masks are fixed boxes on aligned faces; real eye bars are drawn per photo and may be tighter or looser.</li>
+  <li>Intervals reflect enrolment-photo variability only, not the sampling of identities.</li>
+  <li>Grad-CAM and occlusion on the portrait are single-image illustrations, not evidence.</li>
+</ul>
+
+<h2>References</h2>
+<ul>
+  <li>Huang, Ramesh, Berg, Learned-Miller (2007). Labeled Faces in the Wild. UMass Amherst TR 07-49.</li>
+  <li>Simonyan, Zisserman (2015). Very Deep Convolutional Networks for Large-Scale Image Recognition. ICLR.</li>
+  <li>Selvaraju et al. (2017). Grad-CAM. ICCV. <a href="https://arxiv.org/abs/1610.02391">arXiv:1610.02391</a></li>
+  <li>Zeiler, Fergus (2014). Visualizing and Understanding Convolutional Networks. ECCV.</li>
+  <li>Turk, Pentland (1991). Eigenfaces for Recognition. J. Cognitive Neuroscience.</li>
+  <li>McPherson, Shokri, Shmatikov (2016). Defeating Image Obfuscation with Deep Learning. <a href="https://arxiv.org/abs/1609.00408">arXiv:1609.00408</a></li>
+  <li>Nagpal, Singh, Singh, Vatsa (2019). Deep Learning for Face Recognition: Pride or Prejudiced? <a href="https://arxiv.org/abs/1904.01219">arXiv:1904.01219</a></li>
+  <li>CNIL LINC (2023). <a href="https://linc.cnil.fr/protection-des-temoins-casser-la-voix-et-limage">Protection des témoins : casser la voix et l'image</a>.</li>
+</ul>
+<footer>Built by <a href="https://github.com/Pchambet">Pierre Chambet</a> — decision science for operations under uncertainty. Source and reproduction: <a href="https://github.com/Pchambet/cnn-explainability-workshop">github.com/Pchambet/cnn-explainability-workshop</a>.</footer>
+</main>
+<script>
+(function () {
+  const css = getComputedStyle(document.documentElement);
+  const v = (name) => css.getPropertyValue(name).trim();
+  const swap = { "#0d9488": v("--teal"), "#d97706": v("--amber"), "#64748b": v("--slate") };
+  const recolour = (traces) => traces.map((t) => {
+    if (t.line) t.line.color = swap[t.line.color] || t.line.color;
+    if (t.marker && t.marker.color) t.marker.color = swap[t.marker.color] || t.marker.color;
+    if (t.error_y) t.error_y.color = t.line ? t.line.color : v("--ink");
+    return t;
+  });
+  const layout = (extra) => Object.assign({
+    paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)",
+    font: { family: "Inter, system-ui, sans-serif", color: v("--ink"), size: 12 },
+    margin: { l: 56, r: 16, t: 16, b: 48 },
+    legend: { orientation: "h", y: -0.18, font: { size: 11 } },
+    xaxis: { gridcolor: v("--rule"), linecolor: v("--rule"), fixedrange: true },
+    yaxis: { gridcolor: v("--rule"), zeroline: false, tickformat: ".0%", rangemode: "tozero", fixedrange: true },
+    hoverlabel: { font: { family: "Inter, system-ui, sans-serif" } },
+  }, extra);
+  const config = { displayModeBar: false, responsive: true };
+  Plotly.newPlot("rank1", recolour($rank1), layout({
+    shapes: [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: $chance, y1: $chance,
+               line: { color: v("--muted"), width: 1, dash: "dot" } }],
+    annotations: [{ xref: "paper", x: 1, y: $chance, yanchor: "bottom", xanchor: "right",
+                    text: "chance", showarrow: false, font: { color: v("--muted"), size: 11 } }],
+    yaxis: { gridcolor: v("--rule"), zeroline: false, tickformat: ".0%", rangemode: "tozero",
+             fixedrange: true, title: { text: "rank-1 accuracy" } },
+  }), config);
+  Plotly.newPlot("tar", recolour($tar), layout({ barmode: "group",
+    yaxis: { gridcolor: v("--rule"), zeroline: false, tickformat: ".0%", rangemode: "tozero",
+             fixedrange: true, title: { text: "true-accept rate at 1% FAR" } } }), config);
+})();
+</script>
+</body>
+</html>
