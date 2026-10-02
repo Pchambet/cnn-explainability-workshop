@@ -63,6 +63,23 @@ def test_grad_cam_peaks_on_the_evidence():
     assert cam[:8, 20:].max() == 0.0
 
 
+def test_grad_cam_explains_the_logit_not_the_softmax_probability():
+    # Class 0's logit falls as the blob brightens, class 1's ignores the image. Class 1's
+    # softmax probability therefore rises with the blob (via class 0) although its own logit
+    # does not move: Grad-CAM on the probability would light up the blob, on the logit it
+    # must stay empty.
+    inputs = keras.Input((32, 32, 1))
+    conv = keras.layers.Conv2D(1, 3, padding="same", activation="relu", name="conv")
+    pooled = keras.layers.GlobalAveragePooling2D()(conv(inputs))
+    dense = keras.layers.Dense(2, activation="softmax", name="head")
+    model = keras.Model(inputs, dense(pooled))
+    conv.set_weights([np.ones((3, 3, 1, 1), "float32") / 9, np.zeros(1, "float32")])
+    dense.set_weights([np.array([[-1.0, 0.0]], "float32"), np.zeros(2, "float32")])
+    x = np.zeros((1, 32, 32, 1), "float32")
+    x[0, 20:26, 4:10] = 1.0
+    assert grad_cam(model, x, "conv", class_index=1).max() == 0.0
+
+
 def test_activation_maximisation_recovers_a_known_colour_preference():
     # A single 1x1 filter that responds to red minus blue: the optimum is a red image.
     inputs = keras.Input((None, None, 3))

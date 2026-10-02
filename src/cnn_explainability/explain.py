@@ -81,12 +81,24 @@ def mean_abs_correlation(images: np.ndarray) -> float:
 
 
 def grad_cam(model: keras.Model, inputs: np.ndarray, layer: str, class_index: int) -> np.ndarray:
-    """Grad-CAM (Selvaraju et al., 2017) at the resolution of ``layer``, scaled to [0, 1]."""
-    grad_model = keras.Model(model.input, [model.get_layer(layer).output, model.output])
+    """Grad-CAM (Selvaraju et al., 2017) at the resolution of ``layer``, scaled to [0, 1].
+
+    The score is the pre-softmax class logit, as in the paper: ``model`` must end in a Dense
+    layer, whose activation (softmax for the Keras VGG16) is bypassed. The gradient of a
+    softmax probability also depends on every other class's logit, so it would partly
+    explain "less of the other classes" rather than "more of this one".
+    """
+    head = model.layers[-1]
+    if not isinstance(head, keras.layers.Dense):
+        raise ValueError(f"grad_cam needs a model ending in a Dense layer, got {head.name!r}")
+    grad_model = keras.Model(model.input, [model.get_layer(layer).output, head.input])
     x = tf.convert_to_tensor(inputs)
     with tf.GradientTape() as tape:
-        maps, preds = grad_model(x, training=False)
-        score = preds[:, class_index]
+        maps, features = grad_model(x, training=False)
+        logits = tf.matmul(features, head.kernel)
+        if head.use_bias:
+            logits = logits + head.bias
+        score = logits[:, class_index]
     grads = tape.gradient(score, maps)
     weights = tf.reduce_mean(grads, axis=(0, 1, 2))  # one weight per channel
     cam = tf.nn.relu(tf.reduce_sum(maps[0] * weights, axis=-1)).numpy()
