@@ -1,19 +1,41 @@
 [project]
-name = "tp-filters"
-version = "0.1.0"
-description = "Add your description here"
+name = "cnn-explainability-workshop"
+version = "0.2.0"
+description = "What an ImageNet VGG16 looks at in a face, and whether an eye bar stops it from re-identifying someone: measured on LFW."
 readme = "README.md"
-requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Pierre Chambet", email = "pierrechambet@gmail.com" }]
+requires-python = ">=3.12,<3.13"
 dependencies = [
-    "h5py>=3.15.1",
-    "jupyterlab>=4.5.4",
-    "keras>=3.13.2",
-    "keras-applications>=1.0.8",
-    "keras-vggface>=0.6",
-    "matplotlib>=3.10.8",
-    "numpy>=2.4.2",
-    "opencv-python>=4.13.0.92",
-    "pydot>=4.0.1",
-    "scikit-learn>=1.8.0",
-    "tensorflow>=2.20.0",
+    "matplotlib>=3.10",
+    "numpy>=2.0",
+    "pillow>=11.0",
+    "scikit-learn>=1.6",
+    "tensorflow>=2.20",
 ]
+
+[project.scripts]
+cnn-xai = "cnn_explainability.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8.3", "ruff>=0.9"]
+notebook = ["ipykernel>=6.29", "nbconvert>=7.16"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cnn_explainability"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+extend-select = ["I", "B", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+filterwarnings = ["ignore::DeprecationWarning"]
